@@ -1,0 +1,24 @@
+# venv & py cache
+.venv/
+venv/
+__pycache__/
+*.pyc
+
+# OS/editor
+.DS_Store
+.vscode/
+.idea/
+
+# Streamlit & lokala data
+.streamlit/
+data/uploads/
+data/images/
+data/results/
+
+# hemligheter
+.env
+secrets.toml
+
+# models och stora filer (hanteras via LFS)
+models/*.pt
+*.ckpt
