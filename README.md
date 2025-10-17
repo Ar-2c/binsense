@@ -8,7 +8,7 @@ python -m venv .venv
 pip install -r requirements.txt
 copy .env.example .env     # fyll i DB_URL etc
 streamlit run app.py
-
+```
 
 ```
 binsense_app/
@@ -38,4 +38,5 @@ binsense_app/
 
 
 ```
+
 
