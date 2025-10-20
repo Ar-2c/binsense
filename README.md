@@ -1,34 +1,41 @@
-\# Binsense POC
-\## Setup
+# Binsense POC
+## Setup
 ```bash
 git clone <repo-url>
-cd binsense\_app
+cd binsense_app
 python -m venv .venv
-.venv\\Scripts\\activate        # Windows
+.\.venv\Scripts\activate   # Windows
 pip install -r requirements.txt
-copy .env.example .env        # fyll i DB\_URL etc
+copy .env.example .env     # fyll i DB_URL etc
+streamlit run app.py
+```
 
 ```
-binsense\_app/
-├─ app.py                     # landningssida / omdirigera till Dashboard
+binsense_app/
+├─ app.py                          # landningssida / redirect till Dashboard
 ├─ pages/
-│  ├─ 1\_Dashboard.py
-│  ├─ 2\_Site\_detalj.py
-│  └─ 3\_Ladda\_upp\_bild.py
+│  ├─ 1_Dashboard.py
+│  ├─ 2_Site_detalj.py
+│  └─ 3_Ladda_upp_bild.py
 ├─ binsense/
-│  ├─ db.py                   # SQLite helper (init, queries)
-│  ├─ model.py                # YOLO-load \& predict (cached)
-│  ├─ schemas.py              # dataklasser/helpers
-│  └─ viz.py                  # små plotting/helpers
+│  ├─ __init__.py
+│  ├─ db.py                        # DB-helper (init, queries)
+│  ├─ model.py                     # YOLO-load & predict (cached)
+│  ├─ schemas.py                   # dataklasser/helpers
+│  └─ viz.py                       # plotting/helpers
 ├─ etl/
-│  └─ daily\_ingest.py         # valfritt schemalagt flöde
+│  └─ daily_ingest.py              # ev. schemalagt flöde
 ├─ configs/
-│  └─ app.toml                # t.ex. sökvägar, klassnamn
+│  └─ app.toml                     # t.ex. sökvägar, klassnamn, HAS_BACKEND
 ├─ data/
-│  ├─ images/                 # lagrade originalbilder
-│  └─ results/                # ev. plottade bilder
-└─ models/
-&nbsp;  └─ best.pt                 # YOLO-vikter
+│  ├─ images/                      # lokalt mock-läge
+│  ├─ uploads/                     # sparade uploads (backend)
+│  └─ results/                     # ev. plottade bilder
+├─ models/
+│  └─ best.pt                      # YOLO-vikt (valfritt, helst via LFS)
+├─ requirements.txt
+└─ README.md
+
 
 ```
 
