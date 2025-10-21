@@ -1,20 +1,23 @@
-# binsense_app/pages/3_Ladda_upp_bild.py
+# pages/3_Ladda_upp_bild.py
+
+from __future__ import annotations
+
+from dotenv import load_dotenv
+load_dotenv()                     # <-- FLYTTAD HIT, allra först
 
 import os
 import json
 import pathlib
 from datetime import datetime, timezone
+import tempfile
 
 import streamlit as st
 from sqlalchemy import text
 from PIL import Image
 
-from dotenv import load_dotenv
-from azure.storage.blob import BlobServiceClient, ContentSettings
-
 from binsense.db import get_engine
 from binsense import model as bs_model
-
+from binsense import storage        # <-- nu funkar env redan
 
 # -----------------------------
 # Sidinställningar + basic auth
@@ -38,14 +41,13 @@ sidebar_userbox()
 
 st.title("Ladda upp bild")
 
-
 # -----------------------------
 # Konfig / resurser
 # -----------------------------
-load_dotenv()  # för DB_URL, AZURE_* om de ligger i .env
-
+load_dotenv()
+conn_str = os.getenv("AZURE_STORAGE_CONNECTION_STRING")
 engine = get_engine()
-st.caption(f"[Upload] DB: {engine.url}") # KOMMENTERA UT!
+st.caption(f"[Upload] DB: {engine.url}")  # kan kommenteras bort när allt sitter
 
 @st.cache_resource
 def get_yolo():
@@ -54,50 +56,9 @@ def get_yolo():
 
 yolo = get_yolo()
 
-
 # -----------------------------
-# Hjälpare
+# DB helpers
 # -----------------------------
-def upload_to_blob(site_id: str, uploaded_file) -> str | None:
-    """
-    Ladda upp till Azure Blob om AZURE_STORAGE_CONNECTION_STRING finns.
-    Returnerar blob-URI eller None om ingen blob-konfig finns.
-    """
-    conn_str = os.getenv("AZURE_STORAGE_CONNECTION_STRING")
-    if not conn_str:
-        return None
-
-    container = os.getenv("AZURE_BLOB_CONTAINER", "images")
-    bsc = BlobServiceClient.from_connection_string(conn_str)
-
-    blob_name = (
-        f"{site_id.strip()}/"
-        f"{datetime.now(timezone.utc):%Y/%m/%d}/"
-        f"{int(datetime.now(timezone.utc).timestamp())}_{uploaded_file.name}"
-    )
-    blob = bsc.get_blob_client(container=container, blob=blob_name)
-
-    uploaded_file.seek(0)
-    blob.upload_blob(
-        uploaded_file.getvalue(),
-        overwrite=True,
-        content_settings=ContentSettings(content_type=uploaded_file.type or "image/jpeg"),
-    )
-    return f"https://{bsc.account_name}.blob.core.windows.net/{container}/{blob_name}"
-
-
-def save_locally(site_id: str, uploaded_file) -> pathlib.Path:
-    """Spara filen lokalt under data/uploads/<site_id>/ och returnera path."""
-    uploaded_file.seek(0)
-    folder = pathlib.Path("data/uploads") / site_id.strip()
-    folder.mkdir(parents=True, exist_ok=True)
-    filename = f"{datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%S')}_{uploaded_file.name}"
-    save_path = folder / filename
-    with open(save_path, "wb") as f:
-        f.write(uploaded_file.read())
-    return save_path
-
-
 def insert_capture(site_id: str, image_uri: str) -> tuple[str, datetime]:
     """INSERT i captures och returnera (capture_id, captured_at_utc)."""
     captured_at_utc = datetime.now(timezone.utc)
@@ -114,7 +75,6 @@ def insert_capture(site_id: str, image_uri: str) -> tuple[str, datetime]:
         }).mappings().first()
     return row["id"], captured_at_utc
 
-
 def insert_predictions(rows: list[dict]):
     """Bulk-INSERT i bin_status om rows finns."""
     if not rows:
@@ -129,7 +89,6 @@ def insert_predictions(rows: list[dict]):
     with engine.begin() as conn:
         conn.execute(q, rows)
 
-
 # -----------------------------
 # UI
 # -----------------------------
@@ -137,20 +96,34 @@ site_id = st.text_input("Ange Site ID", placeholder="t.ex. 12A")
 uploaded_file = st.file_uploader("Välj en bild", type=["jpg", "jpeg", "png"])
 
 can_submit = bool(site_id.strip()) and (uploaded_file is not None)
+
 if st.button("Spara bild i databasen", type="primary", disabled=not can_submit):
-
     try:
-        # 1) Spara lokalt (alltid, bra fallback)
-        local_path = save_locally(site_id, uploaded_file)
+        # 1) Läs in bytes från uppladdad fil
+        uploaded_file.seek(0)
+        file_bytes = uploaded_file.read()
+        if not file_bytes:
+            st.error("Uppladdad fil verkar tom.")
+            st.stop()
 
-        # 2) Försök ladda upp till Azure Blob → använd blob-URI om det funkar
-        image_uri = upload_to_blob(site_id, uploaded_file) or str(local_path.as_posix())
+        # 2) Ladda upp till Azure Blob → få (image_uri, sas_url)
+        # image_uri = permanent blob-URL (utan SAS) → sparas i DB
+        # sas_url   = tillfällig visnings-URL (funkar med privat container)
+        image_uri, sas_url = storage.save_image_bytes(
+            site_id.strip(),
+            file_bytes,
+            original_name=uploaded_file.name,
+        )
 
         # 3) INSERT i captures → få capture_id
         capture_id, captured_at = insert_capture(site_id.strip(), image_uri)
 
-        # 4) Kör YOLO på den lokala filen (snabbast/gemensamt)
-        detections = bs_model.predict_bins(yolo, local_path, conf=0.25)
+        # 4) Kör YOLO – skriv bytes till en tempfil så din predict kan läsa från path
+        with tempfile.NamedTemporaryFile(suffix=".jpg", delete=False) as tmp:
+            tmp.write(file_bytes)
+            tmp_path = tmp.name
+
+        detections = bs_model.predict_bins(yolo, tmp_path, conf=0.25)
 
         # 5) Bygg rader för bin_status
         ts_utc = datetime.now(timezone.utc)
@@ -160,7 +133,7 @@ if st.button("Spara bild i databasen", type="primary", disabled=not can_submit):
             rows.append({
                 "ts_utc": ts_utc,
                 "site_id": site_id.strip(),
-                "bin_id": None,  # kan vara None i POC
+                "bin_id": None,  # None i POC
                 "klass": d["class_name"],
                 "confidence": float(d["confidence"]),
                 "bbox": json.dumps({"x1": float(x1), "y1": float(y1), "x2": float(x2), "y2": float(y2)}),
@@ -171,7 +144,7 @@ if st.button("Spara bild i databasen", type="primary", disabled=not can_submit):
 
         insert_predictions(rows)
 
-        needs_empty = sum(1 for r in rows if r["klass"] in ("full", "overfull"))
+        needs_empty = sum(1 for r in rows if r["klass"] in ("full", "overfull", "bin_full", "bin_overfull"))
         st.success(
             f"Bild + prediktioner sparade!\n\n"
             f"**site_id:** {site_id}  \n"
@@ -179,14 +152,10 @@ if st.button("Spara bild i databasen", type="primary", disabled=not can_submit):
             f"**Prediktioner:** {len(rows)} (Behöver tömmas: {needs_empty})"
         )
 
-        # Visa bilden (lokalt sparad) så man får direkt feedback
-        try:
-            st.image(str(local_path), caption="Uppladdad bild", use_container_width=True)
-        except Exception:
-            # fallback om Pillow knasar
-            st.write(f"Bild sparad: {local_path}")
+        # 6) Visa bilden via SAS-URL (eller image_uri om SAS saknas)
+        st.image(sas_url or image_uri, caption="Uppladdad bild (Azure Blob)", use_container_width=True)
 
-        # 6) DB-counts som kvitto
+        # 7) Kvittorader
         with engine.begin() as conn:
             cc = conn.execute(text("SELECT COUNT(*) FROM captures")).scalar()
             pp = conn.execute(text("SELECT COUNT(*) FROM bin_status")).scalar()
@@ -194,4 +163,5 @@ if st.button("Spara bild i databasen", type="primary", disabled=not can_submit):
 
     except Exception as e:
         st.error(f"Något gick fel: {e}")
+
 

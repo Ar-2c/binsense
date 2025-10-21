@@ -1,6 +1,0 @@
-DB_URL=postgresql+psycopg://binsense_admin:20BSTrash25@pg-binsense-dev.postgres.database.azure.com:5432/binsense?sslmode=require
-DB_USER=binsense_admin
-DB_PASS=20BSTrash25
-DB_HOST=pg-binsense-dev.postgres.database.azure.com
-DB_PORT=5432
-DB_NAME=binsense
