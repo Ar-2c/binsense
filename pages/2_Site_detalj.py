@@ -4,7 +4,7 @@ import pandas as pd
 import streamlit as st
 
 from binsense.db import get_engine, fetch_sites, fetch_captures, fetch_predictions, fetch_history_per_capture
-from binsense.storage import load_image_from_uri
+from binsense.storage import load_image_from_uri, sas_url_for
 from binsense.viz import draw_boxes
 from binsense.logic import room_needs_empty
 
@@ -60,11 +60,22 @@ c1, c2 = st.columns([2, 1], gap="large")
 with c1:
     st.subheader(f"Senaste bild – site {site_id}")
     st.caption(f"captured_at: {captured_at} • capture_id: {capture_id}")
-    img = load_image_from_uri(image_uri)
+
+    # 1) Hämta en visningsbar URL (SAS om containern är privat)
+    view_url = sas_url_for(image_uri, hours=1)
+
+    # 2) Ladda som PIL (så vi kan rita)
+    img = load_image_from_uri(view_url)
+
     if img is None:
-        st.image(image_uri, caption="(visad direkt från image_uri)", use_container_width=True)
+        # Om vi av någon anledning inte kunde läsa bytes → visa direkt-URL (utan boxes)
+        st.warning("Kunde inte läsa bildbytes för ritning – visar URL direkt.")
+        st.image(view_url, use_container_width=True)
     else:
-        st.image(draw_boxes(img, preds.to_dict("records")), caption="Senaste bild med markerade kärl", use_container_width=True)
+        # 3) Rita boxes om det finns preds
+        pred_rows = preds.to_dict("records")
+        boxed = draw_boxes(img, pred_rows)
+        st.image(boxed, caption="Senaste bild med markerade kärl", use_container_width=True)
 
 with c2:
     st.subheader("Detektioner (senaste)")

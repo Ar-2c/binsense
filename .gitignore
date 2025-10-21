@@ -22,3 +22,8 @@ secrets.toml
 # models och stora filer (hanteras via LFS)
 models/*.pt
 *.ckpt
+
+# hemligheter & artefakter
+logs/
+data/
+*.log
