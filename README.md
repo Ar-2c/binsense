@@ -12,30 +12,20 @@ streamlit run app.py
 
 ```
 binsense_app/
-├─ app.py                          # landningssida / redirect till Dashboard
+├─ app.py
 ├─ pages/
-│  ├─ 1_Dashboard.py
+│  ├─ 1_Dashboard.py        ← ✅ ska vara med
 │  ├─ 2_Site_detalj.py
 │  └─ 3_Ladda_upp_bild.py
 ├─ binsense/
-│  ├─ __init__.py
-│  ├─ db.py                        # DB-helper (init, queries)
-│  ├─ model.py                     # YOLO-load & predict (cached)
-│  ├─ schemas.py                   # dataklasser/helpers
-│  └─ viz.py                       # plotting/helpers
-├─ etl/
-│  └─ daily_ingest.py              # ev. schemalagt flöde
-├─ configs/
-│  └─ app.toml                     # t.ex. sökvägar, klassnamn, HAS_BACKEND
-├─ data/
-│  ├─ images/                      # lokalt mock-läge
-│  ├─ uploads/                     # sparade uploads (backend)
-│  └─ results/                     # ev. plottade bilder
-├─ models/
-│  └─ best.pt                      # YOLO-vikt (valfritt, helst via LFS)
+│  ├─ db.py
+│  ├─ logic.py
+│  ├─ storage.py
+│  └─ viz.py
+├─ README.md
 ├─ requirements.txt
-└─ README.md
-
+├─ .env.example
+└─ .gitignore
 
 ```
 
