@@ -3,8 +3,10 @@ from __future__ import annotations
 import pandas as pd
 import streamlit as st
 
-from binsense.db import get_engine, fetch_sites, fetch_captures, fetch_predictions, fetch_history_per_capture
-from binsense.storage import load_image_from_uri, sas_url_for
+st.set_page_config(page_title="Binsense – Site detalj", layout="wide")
+
+from binsense.db import get_engine, fetch_sites, fetch_captures, fetch_predictions, fetch_history_per_capture, delete_site
+from binsense.storage import load_image_from_uri, sas_url_for, delete_site_blobs
 from binsense.viz import draw_boxes
 from binsense.logic import room_needs_empty
 
@@ -24,31 +26,61 @@ def sidebar_userbox():
 require_login()
 sidebar_userbox()
 
-st.set_page_config(page_title="Binsense – Site detalj", layout="wide")
 st.title("Site – detalj")
 
 eng = get_engine()
 st.caption(f"[Detalj] DB: {eng.url}")
 
 # --- välj site ---
-sites_df = fetch_sites(eng)
-site_options = sites_df["site_id"].astype(str).tolist()
-qp_site = st.query_params.get("site_id")
-default_site = qp_site if qp_site in site_options else (site_options[0] if site_options else "")
-site_id = st.selectbox("Välj site", site_options, index=(site_options.index(default_site) if default_site in site_options else 0))
+try:
+    sites_df = fetch_sites(eng)
+    if "site_id" not in sites_df.columns:
+        st.error("Saknar kolumnen 'site_id' i sites-tabellen.")
+        st.stop()
+except Exception as e:
+    st.error(f"Kunde inte hämta sites: {e}")
+    st.stop()
 
-if not site_id:
-    st.info("Inga sites hittades."); st.stop()
+site_options = sites_df["site_id"].astype(str).dropna().tolist()
+
+# Om inga sites → informera och stoppa säkert
+if not site_options:
+    st.info("Inga sites hittades.")
+    st.stop()
+
+def _qp(name: str):
+    # Streamlit >=1.30
+    try:
+        return st.query_params.get(name)
+    except Exception:
+        q = st.experimental_get_query_params().get(name, [None])
+        return q[0] if isinstance(q, list) else q
+
+pref = _qp("site_id") or st.session_state.get("site_from_dash")
+
+# Robust default + index
+default_site = pref if pref in site_options else site_options[0]
+try:
+    default_idx = site_options.index(default_site)
+except ValueError:
+    default_idx = 0
+
+site_id = st.selectbox("Välj site", site_options, index=default_idx)
+
+# one-shot: städa upp så den inte “fastnar” mellan sidbyten
+st.session_state.pop("site_from_dash", None)
 
 # --- välj capture ---
 caps = fetch_captures(site_id, limit=50, engine=eng)
 if caps.empty:
-    st.info("Inga bilder hittades för den här siten ännu."); st.stop()
+    st.info("Inga bilder hittades för den här siten ännu.")
+    st.stop()
 
 def _cap_label(row):
     return f"{pd.to_datetime(row.captured_at).tz_convert('UTC').strftime('%Y-%m-%d %H:%M:%S UTC')}  •  id={row.capture_id}"
 
-sel = st.selectbox("Välj bild (capture)", options=range(len(caps)), format_func=lambda i: _cap_label(caps.iloc[i]), index=0)
+sel = st.selectbox("Välj bild (capture)", options=range(len(caps)),
+                   format_func=lambda i: _cap_label(caps.iloc[i]), index=0)
 cap = caps.iloc[sel]
 capture_id, image_uri, captured_at = cap.capture_id, cap.image_uri, cap.captured_at
 
@@ -61,24 +93,19 @@ with c1:
     st.subheader(f"Senaste bild – site {site_id}")
     st.caption(f"captured_at: {captured_at} • capture_id: {capture_id}")
 
-    # 1) Hämta en visningsbar URL (SAS om containern är privat)
     view_url = sas_url_for(image_uri, hours=1)
-
-    # 2) Ladda som PIL (så vi kan rita)
     img = load_image_from_uri(view_url)
 
     if img is None:
-        # Om vi av någon anledning inte kunde läsa bytes → visa direkt-URL (utan boxes)
         st.warning("Kunde inte läsa bildbytes för ritning – visar URL direkt.")
         st.image(view_url, use_container_width=True)
     else:
-        # 3) Rita boxes om det finns preds
         pred_rows = preds.to_dict("records")
         boxed = draw_boxes(img, pred_rows)
         st.image(boxed, caption="Senaste bild med markerade kärl", use_container_width=True)
 
 with c2:
-    st.subheader("Detektioner (senaste)")
+    st.subheader("Detektioner från senaste bilden")
     if preds.empty:
         st.info("Inga detektioner i senaste bilden.")
     else:
@@ -99,7 +126,43 @@ if hist.empty:
 else:
     hist["Tid (UTC)"] = pd.to_datetime(hist["captured_at"]).dt.tz_convert("UTC").dt.strftime("%Y-%m-%d %H:%M:%S")
     hist["andel"] = hist.apply(lambda r: (r["behov"]/r["total"]) if r["total"] else 0.0, axis=1)
-    hist["X/Y"] = hist["behov"].astype(int).astype(str) + "/" + hist["total"].astype(int).astype(str)
+    hist["Fyllnadsgrad"] = hist["behov"].astype(int).astype(str) + "/" + hist["total"].astype(int).astype(str)
     hist["Andel %"] = (hist["andel"] * 100).round(0).astype(int).astype(str) + " %"
-    st.dataframe(hist[["Tid (UTC)", "capture_id", "X/Y", "Andel %"]], use_container_width=True, hide_index=True)
-    st.caption("X = antal fulla/överfulla i bilden, Y = totala detekterade kärl i bilden.")
+    st.dataframe(hist[["Tid (UTC)", "capture_id", "Fyllnadsgrad", "Andel %"]],
+                 use_container_width=True, hide_index=True)
+
+# --- delete ---
+st.divider()
+with st.expander("❌ Radera site", expanded=False):
+    st.warning(
+        "Detta tar bort samtliga bilder för rummet och rader i databasen "
+        f"för site **{site_id}**. Observera att detta är irreversibelt"
+    )
+    typed = st.text_input("Skriv exakt site-id för att bekräfta", "")
+    col_a, col_b = st.columns([1, 3])
+    can_delete = typed.strip() == str(site_id)
+
+    if col_a.button("Radera permanent", type="primary", disabled=not can_delete):
+        try:
+            deleted_blobs = delete_site_blobs(site_id)
+            engine = get_engine()
+            counts = delete_site(engine, site_id)
+            st.success(
+                f"Raderat site {site_id}: "
+                f"{deleted_blobs} blobbar • "
+                f"bin_status={counts.get('bin_status',0)}, "
+                f"captures={counts.get('captures',0)}, "
+                f"alerts={counts.get('alerts',0)}, "
+                f"sites={counts.get('sites',0)}"
+            )
+            try:
+                st.query_params.update(site_id=None)
+            except Exception:
+                st.experimental_set_query_params()
+
+            st.session_state.pop('site_from_dash', None)
+            st.switch_page("pages/1_Dashboard.py")
+
+        except Exception as e:
+            st.error(f"Kunde inte radera: {e}")
+    col_b.caption("Säkerhetslås: du måste skriva site-id exakt för att aktivera knappen.")

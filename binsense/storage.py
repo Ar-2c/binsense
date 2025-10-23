@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+from dotenv import load_dotenv, find_dotenv # fixen för azure_storage_connection
+#load_dotenv(find_dotenv(usecwd=True)) 
+
 import io
 import os
 import uuid
@@ -112,3 +115,20 @@ def _make_sas_for_blob(bc, hours: int) -> str:
         account_key=_get_bsc().credential.account_key if hasattr(_get_bsc().credential, "account_key") else None,
     )
     return f"{bc.url}?{sas}" if sas else bc.url
+
+# för delete:
+def delete_site_blobs(site_id: str, container: str | None = None) -> int:
+    """
+    Tar bort alla blobbar under prefixet '<site_id>/'.
+    Returnerar antal borttagna blobbar.
+    """
+    cc = _ensure_container()
+    prefix = f"{site_id}/"
+    deleted = 0
+    for blob in cc.list_blobs(name_starts_with=prefix):
+        try:
+            cc.delete_blob(blob.name)
+            deleted += 1
+        except Exception:
+            pass
+    return deleted

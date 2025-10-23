@@ -193,3 +193,23 @@ def fetch_dashboard_summary(engine: Optional[Engine] = None) -> pd.DataFrame:
             conn,
         )
     return df
+
+def delete_site(engine, site_id: str) -> dict:
+    """
+    Tar bort all data kopplad till en site (inkl. alerts, status, captures, och site-rad).
+    Returnerar antal rader som raderats per tabell.
+    """
+    counts = {}
+    with engine.begin() as cx:
+        # Kör i rätt ordning pga foreign keys
+        for table in ["alerts_dispatch_site", "bin_status", "captures", "sites"]:
+            try:
+                result = cx.execute(
+                    text(f"DELETE FROM {table} WHERE site_id = :sid"),
+                    {"sid": site_id},
+                )
+                counts[table if table != "alerts_dispatch_site" else "alerts"] = result.rowcount
+            except Exception as e:
+                print(f"⚠️ Kunde inte radera i {table}: {e}")
+                counts[table] = 0
+    return counts
