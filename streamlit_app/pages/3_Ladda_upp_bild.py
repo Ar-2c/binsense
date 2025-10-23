@@ -16,7 +16,7 @@ from sqlalchemy import text
 from PIL import Image
 
 from core.db import get_engine
-from ml import model as bs_model
+import ml.model as bs_model
 from core import storage        # <-- nu funkar env redan
 
 # -----------------------------
