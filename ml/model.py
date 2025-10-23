@@ -5,7 +5,7 @@ from typing import List, Dict, Any, Optional
 from ultralytics import YOLO
 
 # === Konfig (ändra vid behov) ===
-WEIGHTS_PATH = Path("models/best.pt")   # peka på er viktfil
+WEIGHTS_PATH = Path(__file__).parent / "best.pt"  # peka på er viktfil
 MODEL_VERSION = "yolo_poc_v1"           # byt när ni versionerar
 
 # === Modell-laddning ===
