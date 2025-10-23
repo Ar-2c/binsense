@@ -3,8 +3,8 @@
 from datetime import datetime, timedelta, timezone
 import pandas as pd
 from sqlalchemy import text
-from binsense.db import get_engine
-from binsense.logging_conf import setup_logging, get_logger, new_run_id
+from core.db import get_engine
+from configs.logging_conf import setup_logging, get_logger, new_run_id
 
 # --- konfig ---
 TAU = 0.8           # konfidens-tröskel

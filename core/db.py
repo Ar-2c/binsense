@@ -1,4 +1,4 @@
-# binsense/db.py
+# core/db.py
 from __future__ import annotations
 
 import os

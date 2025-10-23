@@ -5,10 +5,10 @@ import streamlit as st
 
 st.set_page_config(page_title="Binsense – Site detalj", layout="wide")
 
-from binsense.db import get_engine, fetch_sites, fetch_captures, fetch_predictions, fetch_history_per_capture, delete_site
-from binsense.storage import load_image_from_uri, sas_url_for, delete_site_blobs
-from binsense.viz import draw_boxes
-from binsense.logic import room_needs_empty
+from core.db import get_engine, fetch_sites, fetch_captures, fetch_predictions, fetch_history_per_capture, delete_site
+from core.storage import load_image_from_uri, sas_url_for, delete_site_blobs
+from streamlit_app.viz import draw_boxes
+from core.logic import room_needs_empty
 
 # --- auth / sidebar ---
 def require_login():

@@ -4,7 +4,7 @@ from dotenv import load_dotenv, find_dotenv # fixen för azure_storage_connectio
 from datetime import datetime
 import os, streamlit as st
 
-load_dotenv(dotenv_path='.env')
+load_dotenv(find_dotenv())
 
 # Mappa secrets till env så binsense.db fungerar
 for key in ("DB_URL","DB_USER","DB_PASS","DB_HOST","DB_PORT","DB_NAME"):
@@ -48,9 +48,6 @@ with st.form("login", clear_on_submit=False, border=False):
     create_account = st.form_submit_button("Har du glömt lösenordet?")
     if create_account:
         st.write("Funktionen är under utveckling")
-
-
-        
 
 if login:
     ok = False

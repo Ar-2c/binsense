@@ -15,9 +15,9 @@ import streamlit as st
 from sqlalchemy import text
 from PIL import Image
 
-from binsense.db import get_engine
-from binsense import model as bs_model
-from binsense import storage        # <-- nu funkar env redan
+from core.db import get_engine
+from ml import model as bs_model
+from core import storage        # <-- nu funkar env redan
 
 # -----------------------------
 # Sidinställningar + basic auth

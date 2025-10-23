@@ -5,7 +5,7 @@ import streamlit as st
 from sqlalchemy import text
 from datetime import datetime
 
-from binsense.db import get_engine, fetch_dashboard_summary
+from core.db import get_engine, fetch_dashboard_summary
 
 
 # -------------------------------------------------
@@ -41,7 +41,7 @@ st.caption(f"[Dashboard] DB: {eng.url}")
 # -------------------------------------------------
 from sqlalchemy import text
 import pandas as pd
-from binsense.db import get_engine
+from core.db import get_engine
  
 eng = get_engine()
  
