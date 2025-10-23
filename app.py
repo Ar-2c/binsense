@@ -1,6 +1,9 @@
 # binsense_app/app.py
+from dotenv import load_dotenv, find_dotenv # fixen för azure_storage_connection
+#load_dotenv(find_dotenv(usecwd=True))  # måste köras innan binsense.storage importeras
 from datetime import datetime
 import os, streamlit as st
+
 
 # Mappa secrets till env så binsense.db fungerar
 for key in ("DB_URL","DB_USER","DB_PASS","DB_HOST","DB_PORT","DB_NAME"):
@@ -35,13 +38,17 @@ st.title("Logga in")
 USERS = dict(st.secrets.get("users", {}))
 GLOBAL_PWD = st.secrets.get("APP_PASSWORD")
 
-with st.form("login", clear_on_submit=False, width="content", border=False):
-        username = st.text_input("Användarnamn", value="")
-        password = st.text_input("Lösenord", type="password", value="")    
-        login = st.form_submit_button("Logga in")
-        create_account = st.form_submit_button("skapa konto")
-        if create_account:
-            st.write("Kontoregistrering är under utveckling")
+st.markdown("<style>div[data-testid='stForm']{max-width:420px;margin:0 auto;}</style>", unsafe_allow_html=True)
+
+with st.form("login", clear_on_submit=False, border=False):
+    username = st.text_input("Användarnamn", value="")
+    password = st.text_input("Lösenord", type="password", value="")
+    login = st.form_submit_button("Logga in")   # lägg ev. use_container_width=False om du vill ha smalare knapp
+    create_account = st.form_submit_button("Har du glömt lösenordet?")
+    if create_account:
+        st.write("Funktionen är under utveckling")
+
+
         
 
 if login:
