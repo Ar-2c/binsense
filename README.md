@@ -16,7 +16,7 @@ Applikationen använder en tränad **YOLO-modell** för att analysera bilder och
 
 ## Arkitektur och teknik
 
-| Komponent | Beskrivning |
+|Komponent |Beskrivning |
 |------------|-------------|
 | **Frontend** | Streamlit |
 | **Backend / logik** | Python, SQLAlchemy |
@@ -71,7 +71,7 @@ eller (om appen ligger i en undermapp):
 ```bash
 PYTHONPATH=. streamlit run streamlit_app/app.py
 ```
-
+## Projektträd
 ```
 binsense_app/
 ├─ configs/                  # App-konfig, loggning
