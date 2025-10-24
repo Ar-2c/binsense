@@ -1,4 +1,4 @@
-# logging_conf.py
+# configs/logging_conf.py
 import logging
 import os
 import uuid
@@ -26,21 +26,21 @@ def setup_logging(
     - to_file=True lokalt (roterar dagligen). I Azure Functions: lämna False.
     """
     root = logging.getLogger()
-    if root.handlers:   # redan konfad
+    if root.handlers:
         return
 
-    logging.captureWarnings(True)  # fånga warnings också
+    logging.captureWarnings(True)  # warnings
 
     lvl = (level or os.getenv("LOG_LEVEL") or "INFO").upper()
     root.setLevel(lvl)
     root.addFilter(_ContextFilter())
 
-    # Console / stdout — viktigt i molnet
+    # Console / stdout
     ch = logging.StreamHandler()
     ch.setFormatter(logging.Formatter(_FMT))
     root.addHandler(ch)
 
-    # Lokal fil med rotation om vi vill spara loggar lokalt
+    # Lokal fil med rotation
     if to_file:
         os.makedirs(logs_dir, exist_ok=True)
         fh = TimedRotatingFileHandler(

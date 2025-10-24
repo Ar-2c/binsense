@@ -2,9 +2,9 @@
 import os, smtplib, ssl
 from email.message import EmailMessage
 from typing import Iterable, Optional, Tuple
-from dotenv import load_dotenv
+from dotenv import load_dotenv, find_dotenv
 
-load_dotenv(dotenv_path='.env')
+load_dotenv(find_dotenv())
 
 def _smtp_settings():
     host = os.getenv('SMTP_HOST')
@@ -19,7 +19,7 @@ def send_email(
         subject: str,
         body: str,
         to: Iterable[str],
-        attachments: Optional[Iterable[Tuple[str, bytes, str]]] = None,  # (filename, bytes, mime)
+        attachments: Optional[Iterable[Tuple[str, bytes, str]]] = None,
         sender: Optional[str] = None,
 ):
     host, port, user, pwd = _smtp_settings()
@@ -37,7 +37,6 @@ def send_email(
         msg.add_attachment(blob, maintype=maintype, subtype=subtype, filename=fname)
 
     context = ssl.create_default_context()
-    
     
     if port == 465:
     # Ren SSL från start (ingen starttls)

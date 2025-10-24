@@ -1,28 +1,24 @@
-# binsense/model.py
+# ml/model.py
 from __future__ import annotations
 from pathlib import Path
-from typing import List, Dict, Any, Optional
+from typing import Optional
 from ultralytics import YOLO
 
-# === Konfig (ändra vid behov) ===
-WEIGHTS_PATH = Path(__file__).parent / "best.pt"  # peka på er viktfil
-MODEL_VERSION = "yolo_poc_v1"           # byt när ni versionerar
+# sökväg till modellvikter och modellversion
+WEIGHTS_PATH = Path(__file__).parent / "best.pt"
+MODEL_VERSION = "yolo_poc_v1"
 
-# === Modell-laddning ===
-# Vi cache:ar inte med Streamlit här, utan låter anroparen (Streamlit-sidan) cache:a.
+# funktion för att ladda modell
 def load_model(weights: Optional[str | Path] = None) -> YOLO:
     w = Path(weights) if weights else WEIGHTS_PATH
     if not w.exists():
         raise FileNotFoundError(f"Viktfil saknas: {w.resolve()}")
     return YOLO(str(w))
 
-# === Prediktion ===
-# binsense/model.py
-from pathlib import Path
-
+# preditkioner av bins
 def predict_bins(ultra_model, image_path, conf: float = 0.25):
     p = str(Path(image_path))
-    results = ultra_model.predict(p)  # v8-säkert, inga kwargs
+    results = ultra_model.predict(p)
 
     names = getattr(ultra_model, "names", {}) or {}
     out = []

@@ -2,15 +2,15 @@
 from __future__ import annotations
 import pandas as pd
 import streamlit as st
-
-st.set_page_config(page_title="Binsense – Site detalj", layout="wide")
-
 from core.db import get_engine, fetch_sites, fetch_captures, fetch_predictions, fetch_history_per_capture, delete_site
 from core.storage import load_image_from_uri, sas_url_for, delete_site_blobs
 from streamlit_app.viz import draw_boxes
 from core.logic import room_needs_empty
 
-# --- auth / sidebar ---
+# fliknamn
+st.set_page_config(page_title="Binsense - detaljvy", layout="wide")
+
+# sidinställningar och användaruppgifter
 def require_login():
     if not st.session_state.get("user"):
         st.switch_page("app.py")
@@ -18,7 +18,7 @@ def require_login():
 def sidebar_userbox():
     u = st.session_state.get("user", {})
     with st.sidebar:
-        st.caption(f"👤 {u.get('name','okänd')} • tenant {u.get('tenant_id','-')}")
+        st.caption(f"användare{u.get('tenant_id',':')} {u.get('name','okänd')}")
         if st.button("Logga ut"):
             st.session_state.pop("user", None)
             st.experimental_rerun()
@@ -26,12 +26,11 @@ def sidebar_userbox():
 require_login()
 sidebar_userbox()
 
-st.title("Site – detalj")
+st.title("Detaljvy")
 
 eng = get_engine()
-st.caption(f"[Detalj] DB: {eng.url}")
 
-# --- välj site ---
+# välj site
 try:
     sites_df = fetch_sites(eng)
     if "site_id" not in sites_df.columns:
@@ -43,13 +42,12 @@ except Exception as e:
 
 site_options = sites_df["site_id"].astype(str).dropna().tolist()
 
-# Om inga sites → informera och stoppa säkert
 if not site_options:
     st.info("Inga sites hittades.")
     st.stop()
 
+# hanterar förval för "detaljvy" i rullistan 
 def _qp(name: str):
-    # Streamlit >=1.30
     try:
         return st.query_params.get(name)
     except Exception:
@@ -58,7 +56,7 @@ def _qp(name: str):
 
 pref = _qp("site_id") or st.session_state.get("site_from_dash")
 
-# Robust default + index
+# Hämtar vald site och sätter som default i rullistan
 default_site = pref if pref in site_options else site_options[0]
 try:
     default_idx = site_options.index(default_site)
@@ -67,31 +65,31 @@ except ValueError:
 
 site_id = st.selectbox("Välj site", site_options, index=default_idx)
 
-# one-shot: städa upp så den inte “fastnar” mellan sidbyten
+# städa upp så den inte “fastnar” mellan sidbyten
 st.session_state.pop("site_from_dash", None)
 
-# --- välj capture ---
+# välj bland tagna bilder
 caps = fetch_captures(site_id, limit=50, engine=eng)
 if caps.empty:
     st.info("Inga bilder hittades för den här siten ännu.")
     st.stop()
 
-def _cap_label(row):
+def _cap_label(row): # bildnamn
     return f"{pd.to_datetime(row.captured_at).tz_convert('UTC').strftime('%Y-%m-%d %H:%M:%S UTC')}  •  id={row.capture_id}"
 
-sel = st.selectbox("Välj bild (capture)", options=range(len(caps)),
+sel = st.selectbox("Välj bild", options=range(len(caps)),
                    format_func=lambda i: _cap_label(caps.iloc[i]), index=0)
 cap = caps.iloc[sel]
 capture_id, image_uri, captured_at = cap.capture_id, cap.image_uri, cap.captured_at
 
 preds = fetch_predictions(str(capture_id), engine=eng)
 
-# --- layout ---
+# layout
 c1, c2 = st.columns([2, 1], gap="large")
 
 with c1:
     st.subheader(f"Senaste bild – site {site_id}")
-    st.caption(f"captured_at: {captured_at} • capture_id: {capture_id}")
+    st.caption(f"Bild tagen: {captured_at}")
 
     view_url = sas_url_for(image_uri, hours=1)
     img = load_image_from_uri(view_url)
@@ -118,8 +116,8 @@ with c2:
         st.metric("Behöver tömmas?", "Ja" if need else "Nej",
                   delta=f"{need_cnt}/{total} kärl ({ratio:.0%}), tröskel {thr:.0%}")
 
-# --- historik per bild (senaste 50) ---
-st.subheader("Historik (senaste 50 bilder) – antal fulla / totalt")
+# bildhistorik
+st.subheader("Bildhistorik")
 hist = fetch_history_per_capture(site_id, limit=50, engine=eng)
 if hist.empty:
     st.info("Ingen historik ännu.")
@@ -131,9 +129,9 @@ else:
     st.dataframe(hist[["Tid (UTC)", "capture_id", "Fyllnadsgrad", "Andel %"]],
                  use_container_width=True, hide_index=True)
 
-# --- delete ---
+# delete
 st.divider()
-with st.expander("❌ Radera site", expanded=False):
+with st.expander("Radera site", expanded=False):
     st.warning(
         "Detta tar bort samtliga bilder för rummet och rader i databasen "
         f"för site **{site_id}**. Observera att detta är irreversibelt"

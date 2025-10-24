@@ -5,12 +5,12 @@ import pandas as pd
 from sqlalchemy import text
 from core.db import get_engine
 
-# --- konfig ---
+# villkor
 TAU = 0.8           # konfidens-tröskel
-THRESHOLD = 0.8     # andel fulla kärl som krävs
-SINCE_HOURS = 24    # tidsfönster i timmar
+THRESHOLD = 0.8     # andel totalt fulla kärl av rummet
+SINCE_HOURS = 24    # tidsintervall
 
-# --- SQL ---
+# SQL-transaktioner
 SQL_FETCH = text("""
 SELECT site_id, class, confidence, ts_utc
 FROM bin_status
@@ -25,7 +25,7 @@ VALUES
   (:generated_at, :site_id, :reason, :last_seen, :confidence)
 """)
 
-# --- helpers ---
+# skapar funktion för att avgöra om siten behöver tömmas
 def site_group_is_full(df_group: pd.DataFrame, tau: float = TAU, threshold: float = THRESHOLD):
     """
     Returnerar dict om andelen kärl i en grupp är fulla/överfulla med hög confidence.
@@ -65,7 +65,7 @@ def main():
     df['class_norm'] = df['class'].str.replace('bin_', '', regex=False)
 
     # Skapa tidskluster
-    df['ts_group'] = df['ts_utc'].dt.floor('1min')  # justera till '5min' vid behov
+    df['ts_group'] = df['ts_utc'].dt.floor('1min')
 
     alerts = []
     for (site_id, ts_group), g in df.groupby(['site_id', 'ts_group']):
