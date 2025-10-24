@@ -16,8 +16,8 @@ Applikationen använder en tränad **YOLO-modell** för att analysera bilder och
 
 ## Arkitektur och teknik
 
-|Komponent |Beskrivning |
-|------------|-------------|
+| Komponent | Beskrivning |
+|:-----------|:-------------|
 | **Frontend** | Streamlit |
 | **Backend / logik** | Python, SQLAlchemy |
 | **AI-modell** | Ultralytics YOLO (PyTorch) |
