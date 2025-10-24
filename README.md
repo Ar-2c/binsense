@@ -40,7 +40,7 @@ Applikationen använder en tränad **YOLO-modell** för att analysera bilder och
 
 ### 1️ Klona projektet
 
-## 2 Skapa virtuell miljö och installera beroenden
+### 2 Skapa virtuell miljö och installera beroenden
 ```bash
 python -m venv .venv
 # Windows
@@ -51,7 +51,7 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-## 3 Konfigurera miljövariabler
+### 3 Konfigurera miljövariabler
 Kopiera exempel-filen och fyll i din egen databas-URL:
 ```bash
 copy .env.example .env   # Windows
@@ -63,7 +63,7 @@ Exempel:
 DB_URL=postgresql+psycopg2://<user>:<password>@<host>:<port>/<database>
 ```
 
-## 4 Starta appen
+### 4 Starta appen
 ```bash
 streamlit run app.py
 ```
