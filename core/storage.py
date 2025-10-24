@@ -1,16 +1,14 @@
+# core/storage.py
 from __future__ import annotations
 
-from dotenv import load_dotenv, find_dotenv # fixen för azure_storage_connection
-#load_dotenv(find_dotenv(usecwd=True)) 
-
-import io
-import os
-import uuid
+from dotenv import load_dotenv, find_dotenv
+import io, os, uuid
 from datetime import datetime, timedelta, timezone
 from typing import Optional, Tuple
-
 from PIL import Image
 from azure.storage.blob import BlobServiceClient, BlobSasPermissions, generate_blob_sas
+
+load_dotenv(find_dotenv())
 
 _CFG: tuple[str, str] | None = None
 _bsc: BlobServiceClient | None = None
@@ -66,7 +64,7 @@ def _make_sas_for_blob(bc, hours: int) -> str:
     )
     return f"{bc.url}?{sas}" if sas else bc.url
 
-# Publika API:t (oförändrat)
+# Publikt API
 def save_image_bytes(site_id: str, data: bytes, original_name: str = "image.jpg") -> Tuple[str, str]:
     suffix = ("." + original_name.split(".")[-1].lower().strip(".")) if "." in original_name else ".jpg"
     content_type = "image/jpeg" if suffix in (".jpg", ".jpeg") else ("image/png" if suffix == ".png" else "application/octet-stream")
@@ -81,6 +79,7 @@ def save_image_bytes(site_id: str, data: bytes, original_name: str = "image.jpg"
     sas_url = _make_sas_for_blob(bc, hours=1)
     return image_uri, sas_url
 
+# definition av återkommande funktioner för Azure
 def sas_url_for(image_uri: str, hours: int = 1) -> str:
     if "blob.core.windows.net" not in image_uri:
         return image_uri
@@ -101,9 +100,6 @@ def load_image_from_uri(uri: str) -> Optional[Image.Image]:
     except Exception:
         return None
 
-# =========================
-# Intern hjälpare
-# =========================
 def _make_sas_for_blob(bc, hours: int) -> str:
     expiry = datetime.now(timezone.utc) + timedelta(hours=hours)
     sas = generate_blob_sas(
@@ -116,7 +112,6 @@ def _make_sas_for_blob(bc, hours: int) -> str:
     )
     return f"{bc.url}?{sas}" if sas else bc.url
 
-# för delete:
 def delete_site_blobs(site_id: str, container: str | None = None) -> int:
     """
     Tar bort alla blobbar under prefixet '<site_id>/'.

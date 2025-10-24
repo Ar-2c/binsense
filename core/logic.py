@@ -1,4 +1,4 @@
-# binsense/logic.py
+# core/logic.py
 from __future__ import annotations
 import pandas as pd
 
@@ -7,8 +7,7 @@ NEED_CLASSES = {"full", "overfull", "bin_full", "bin_overfull"}
 def room_needs_empty(preds: pd.DataFrame, threshold: float) -> tuple[bool, int, int, float]:
     """
     Returnerar (need_flag, need_count, total_bins, ratio_full).
-    - threshold = andel fulla kärl som krävs, t.ex. 0.90
-    Robust mot tom DF.
+    - threshold = andel fulla kärl som krävs, t.ex. 0.90.
     """
     if preds is None or preds.empty or "class" not in preds.columns:
         return False, 0, 0, 0.0

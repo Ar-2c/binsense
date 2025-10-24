@@ -3,7 +3,8 @@
 import pandas as pd
 import streamlit as st
 from sqlalchemy import text
-from core.db import get_engine, fetch_dashboard_summary
+from core.db import get_engine
+from core.queries import fetch_dashboard_summary
 
 # fliknamn
 st.set_page_config(page_title="Binsense – Dashboard", layout="wide")

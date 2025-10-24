@@ -2,7 +2,8 @@
 from __future__ import annotations
 import pandas as pd
 import streamlit as st
-from core.db import get_engine, fetch_sites, fetch_captures, fetch_predictions, fetch_history_per_capture, delete_site
+from core.db import get_engine
+from core.queries import fetch_sites, fetch_captures, fetch_predictions, fetch_history_per_capture, delete_site
 from core.storage import load_image_from_uri, sas_url_for, delete_site_blobs
 from streamlit_app.viz import draw_boxes
 from core.logic import room_needs_empty
