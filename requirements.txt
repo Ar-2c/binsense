@@ -1,0 +1,13 @@
+streamlit
+ultralytics
+torch
+torchvision
+opencv-python
+numpy
+pandas
+pillow
+requests
+python-dotenv
+PyYAML
+psycopg[binary]
+SQLAlchemy
