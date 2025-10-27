@@ -10,4 +10,5 @@ requests
 python-dotenv
 PyYAML
 psycopg[binary]
+azure-storage-blob
 SQLAlchemy
